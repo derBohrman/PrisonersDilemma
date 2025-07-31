@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+ <meta charset="UTF-8">
+ <title>Prisoners Dilemma</title>
+ <link rel="icon" type="image/png" href="https://doku.schuelerakademien.de/wp-content/uploads/2025/07/favicon.png">
+ <style>
+  table,
+  th,
+  td {
+   border: thin solid black;
+   border-collapse: collapse;
+  }
+
+  @media (prefers-color-scheme: dark) {
+   body {
+    background-color: #121212;
+    color: white;
+   }
+
+   table,
+   th,
+   td {
+    border: thin solid white;
+    border-collapse: collapse;
+    text-align: center;
+   }
+  }
+ </style>
+</head>
+
+<body>
+ <div style="width: 100%;position: relative">
+  <div style="float:left; width: 20%">
+   <button onclick="tournament()">Turnier starten</button><br>
+   Wiederholungen <input type="text" id="repeats" inputmode="numeric" pattern="[0-9]*"
+    placeholder="Anzahl Wiedeholungen" value="1000">
+   <pre id="selector"></pre>
+  </div>
+  <div style="float:left; width:20%">
+   <pre id="result"></pre>
+  </div>
+  <div style="float:left; width:60%">
+   <div style="float:left; width:50%">
+    <button onclick="addBot()">Bot hinzufügen</button><br>
+    Name<br>
+    <input type="text" id="name" placeholder="Name des Bots" value="Defektion"><br>
+    Funktion <br>
+    <textarea name="mechCode" rows="5" cols="30" minlength="0">()=>[1]</textarea>
+   </div>
+   <div style="float:left; width:50%">
+    <table>
+     <caption>Payoff Table</caption>
+     <thead>
+      <tr>
+       <td></td>
+       <th>Cooperation</th>
+       <th>Defektion</th>
+      </tr>
+     </thead>
+     <tbody>
+      <tr>
+       <th>Cooperation</th>
+       <td>3, 3</td>
+       <td>0, 4</td>
+      </tr>
+      <tr>
+       <th>Defektion</th>
+       <td>4, 0</td>
+       <td>1, 1</td>
+      </tr>
+     </tbody>
+    </table>
+   </div>
+   <div style="float:left; width:100%">
+    <h4>Bot Struktur</h4>
+    Ein Bot wird immer als Funktion gestaltet. Diese Funktion nimmt als Input (enemyLastMove, param1, param2,...).
+    Die Funktion sollte eine Liste mit dem Format [ownMove, param1, param2,...] zurückgeben.
+    Man kann also über die Parameter dafür sorgen, dass Daten zwischen den einzelnen Aufrufen der Funktion gespeichert
+    werden.<br>
+    ownMove und enemyLastMove haben immer die Werte 0 (Cooperation) oder 1 (Defektion).<br>
+    Achtung! Beim allerersten Ausführen der Funktion wird kein Parameter an die Funktion weitergegeben.
+   </div>
+  </div>
+  <div style="float:left; width:100%">
+   <h4>Spielidee</h4>
+   In diesem Spiel geht es um zwei Häftlinge, die wegen eines Vergehens eine geringe Haftstrafe absitzen.
+   In dieser Situation wird ihnen das Angebot gemacht, gegen den jeweils anderen in einer ungeklärten schweren
+   Strafsache auszusagen.
+   Durch die Kronzeugenregelung würde der Aussagende begnadigt, der andere jedoch zu weiterer Haft oder gar zum Tod
+   verurteilt.
+   Sagt keiner aus, so müssen sie ihre leichte Haftstrafe bis zum Ende absitzen.
+   Sagen jedoch beide zugleich gegen den jeweils anderen aus, greift die Kronzeugenregelung nicht,
+   und beide werden gleichermaßen wegen des schweren Vergehens verurteilt.
+   <br>
+   <br>
+   Die beiden Strategien sind die Aussageverweigerung (Cooperation) oder die Beschuldigung des anderen (Defektion).
+   Ein Dilemma entsteht dadurch, dass sich die Spieler entscheiden müssen,
+   ohne die Entscheidung des anderen zu kennen oder mit ihm verabreden zu können.
+   <br>
+   <br>
+   In diesem Fall wird das Spiel mehrmals gespielt. Die wiederholte Interaktion ermöglicht es, Kooperation in folgenden
+   Runden zu belohnen, was zu
+   höheren Gesamtauszahlungen führt, oder Defektion zu vergelten, was zu geringeren Auszahlungen führt. Tit for Tat
+   („wie du mir, so ich dir“) bedeutet in der nächsten Periode Bestrafung für den Verrat. Man spricht in dem Fall von
+   kalkulativem Vertrauen.
+   <br>
+   <br>
+   Zur Interpretation der Ergebnisse eines Spiels werden bei endlichen Spielen die Auszahlungen der einzelnen Runden zu
+   einer Gesamtauszahlung zusammengefasst, welche dann den Erfolg eines Spielers in einem Spiel wiedergibt.
+   <br>
+   <br>
+   <cite>https://de.wikipedia.org/wiki/Gefangenendilemma</cite>
+   <h4>Anleitung</h4>
+   Auf dieser Webseite kann man nun durch Turniere die verschiedene Spielmethoden mithilfe von Bots bewerten.
+   Bei einem Turnier spielt jeder Bot gegen jeden, wodurch diese am Ende durch die Summe der Gesamtauszahlungen bewertet
+   werden können.
+   <br>
+   <br>
+   Links kann man einstellen welche Bots spielen und wie häufig sie jeweils miteinander Interagieren sollen.<br>
+   In der Mitte wird dann das Ergebnis angezeigt.<br>
+   Rechts davon kann man selbst Bots programmieren.<br>
+   Ganz Rechts wird angezeigt, wie die Bots nach jeder Interaktion ausgezahlt werden.
+  </div>
+ </div>
+ <script type="text/javascript">
+  let machines = [
+   [() => [1], "Defektion"],
+   [() => [0], "Cooperation"],
+   [(other = 0) => [other], "TitForTat"],
+   [() => [~~(Math.random() + 0.5)], "Random"],
+   [(other = 0, stolen = 0) => [stolen || other, stolen || other], "GrimmTrigger"],
+   [(other = 0, beliefes = [0, 0]) => { beliefes[other]++; return [+(beliefes[0] < beliefes[1]), beliefes] }, "FictitiousPlay"]
+  ]
+  let payTable = [[3, 0], [4, 1]]
+  let used = (i) => document.getElementById("mech" + i).checked
+  function repeatPlay([mechA, nameA], [mechB, nameB]) {
+   let repeats = +document.getElementById("repeats").value || 1
+   let playA = mechA()
+   let playB = mechB()
+   let sumsA = [payTable[playA[0]][playB[0]]]
+   let sumsB = [payTable[playB[0]][playA[0]]]
+   let movesA = [playA[0]]
+   let movesB = [playB[0]]
+   for (let i = 0; i < repeats - 1; i++) {
+    let plays = [playA[0], playB[0]]
+    playA[0] = plays[1]
+    playB[0] = plays[0]
+    playA = mechA(...playA)
+    playB = mechB(...playB)
+    sumsA.push(sumsA[i] + payTable[playA[0]][playB[0]])
+    sumsB.push(sumsB[i] + payTable[playB[0]][playA[0]])
+    movesA.push(playA[0])
+    movesB.push(playB[0])
+   }
+   return [sumsA[repeats - 1], sumsB[repeats - 1]]
+  }
+  function botChoosable(i) {
+   let name = machines[i][1]
+   let id = "mech" + i
+   let label = document.createElement("label")
+   label.setAttribute("for", id)
+   let checkbox = document.createElement("input")
+   checkbox.type = "checkbox"
+   checkbox.value = name
+   checkbox.id = id
+   checkbox.checked = true
+   label.appendChild(checkbox)
+   label.appendChild(document.createTextNode(name + "\n"))
+   document.getElementById("selector").appendChild(label)
+  }
+  function show(scores, start) {
+   for (let i = 0; i < scores.length; i++) {
+    scores[i] = [scores[i], i]
+   }
+   scores.sort((a, b) => b[0] - a[0])
+   let result = ""
+   for (let i = 0; i < scores.length; i++) {
+    if (used(scores[i][1])) {
+     result += `${i + 1}. ${machines[scores[i][1]][1]}: ${scores[i][0]}\n`
+    }
+   }
+   result += `\nRuntime: ${(Date.now() - start) / 1000}s`
+   document.getElementById("result").textContent = result
+  }
+  function tournament() {
+   let start = Date.now()
+   let botScores = Array(machines.length).fill(0)
+   for (let i = 0; i < machines.length; i++) {
+    for (let j = 0; j < machines.length; j++) {
+     if (used(i) && used(j)) {
+      let [aWin, bWin] = repeatPlay(machines[i], machines[j])
+      botScores[i] += aWin
+      botScores[j] += bWin
+     }
+    }
+   }
+   show(botScores, start)
+  }
+  function addBot() {
+   let name = document.getElementById("name").value || "No Name"
+   let code = document.getElementsByName("mechCode")[0].value || "()=>[0]"
+   machines.push([eval(code), name])
+   botChoosable(machines.length - 1)
+  }
+  for (let i = 0; i < machines.length; i++) {
+   botChoosable(i)
+  }
+  tournament()
+ </script>
+</body>
+
+</html>
